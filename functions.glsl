@@ -1,0 +1,231 @@
+#include "brdf.glsl"
+
+// Use numeric values for preprocessor directives to work properly
+#define true 1
+#define false 0
+#define COLORED_SHADOWS_ENABLED true // [true false]
+
+#define gl_EXP 2048
+#define gl_EXP2 2049
+#define gl_LINEAR 9729
+
+// Voxel functions
+
+// Function to get voxel position
+
+
+// Function to check if a voxel has red block data
+int checkRedBlock(ivec3 voxel_pos, usampler3D voxelSampler) {
+	if(clamp(voxel_pos, ivec3(0), ivec3(VOXEL_AREA)) != voxel_pos) {
+		return 0;
+	}
+	vec4 bytes = unpackUnorm4x8(texture3D(voxelSampler, vec3(voxel_pos)/vec3(VOXEL_AREA)).r);
+	return (bytes.r > 0.9) ? 1 : 0;
+}
+
+
+// Soft shadow functions for smoother shadows
+float getSoftShadow(vec3 shadowScreenSpace) {
+    const float shadowBias = 0.00005;
+    const int shadowSamples = 9;
+    const float texelSize = 1.0 / 4096.0; // shadowMapResolution
+    
+    float shadowSum = 0.0;
+    float currentDepth = shadowScreenSpace.z - shadowBias;
+    
+    // 3x3 PCF sampling
+    for(int x = -1; x <= 1; x++) {
+        for(int y = -1; y <= 1; y++) {
+            vec2 offset = vec2(x, y) * texelSize;
+            float shadowDepth = texture(shadowtex0, shadowScreenSpace.xy + offset).r;
+            shadowSum += (currentDepth <= shadowDepth) ? 1.0 : 0.0;
+        }
+    }
+    
+    return shadowSum / float(shadowSamples);
+}
+
+#if COLORED_SHADOWS_ENABLED 
+float getSoftColoredShadow(vec3 shadowScreenSpace) {
+    const float shadowBias = 0.00005;
+    const int shadowSamples = 9;
+    const float texelSize = 1.0 / 4096.0; // shadowMapResolution
+    
+    float shadowSum = 0.0;
+    float currentDepth = shadowScreenSpace.z - shadowBias;
+    
+    // 3x3 PCF sampling for colored shadows
+    for(int x = -1; x <= 1; x++) {
+        for(int y = -1; y <= 1; y++) {
+            vec2 offset = vec2(x, y) * texelSize;
+            float shadowDepth = texture(shadowtex1, shadowScreenSpace.xy + offset).r;
+            shadowSum += (currentDepth <= shadowDepth) ? 1.0 : 0.0;
+        }
+    }
+    
+    return shadowSum / float(shadowSamples);
+}
+#endif
+
+mat3 tbnNormalTangent(vec3 normal, vec3 tangent){
+    vec3 bitangent = cross(tangent, normal);
+    return mat3(tangent, bitangent, normal);
+}
+
+float expRange(float x, float start, float end, float curve) {
+    if (x <= start) return 0.0;
+    if (x >= end)   return 1.0;
+
+    float t = (x - start) / (end - start); // 0 → 1 normalizasyon
+    return (exp(curve * t) - 1.0) / (exp(curve) - 1.0);
+}
+
+float computeFog(float distanceFromCamera, int fogMode, float fogStart, float fogEnd) {
+    if(fogMode == gl_LINEAR) { // LINEAR
+        return 1.0 - clamp((distanceFromCamera - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
+    } else if(fogMode == gl_EXP) { // EXP
+        return 1.0 - expRange(distanceFromCamera, fogStart, fogEnd, 0.5);
+    } else if(fogMode == gl_EXP2) { // EXP2
+        return 1.0 - expRange(distanceFromCamera, fogStart, fogEnd, 0.5);
+    }
+    return 1.0;
+}
+
+float computeDistanceFog(float distanceFromCamera, float fogStart, float fogEnd){
+    return 1.0 - clamp((distanceFromCamera - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
+}
+const float LM_SCALE  = 33.05 / 32.0;
+const float LM_OFFSET = 1.05 / 32.0;
+vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
+    //normal calc
+    vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * geoNormal;
+    vec3 worldTangent = mat3(gbufferModelViewInverse) * tangent.xyz;
+    vec4 normalData = texture(normals,texCoord) * 2.0 - 1.0;
+    vec3 normalNormalSpace = vec3(normalData.xy, sqrt(1.0 - dot(normalData.xy, normalData.xy)));
+    mat3 TBN = tbnNormalTangent(worldGeoNormal, worldTangent);
+    vec3 normalWorldSpace = TBN * normalNormalSpace;
+
+    //material data
+    vec4 specularData = texture(specular, texCoord);
+    float perceptualSmoothness = specularData.r;
+    float metallic = 0.0;
+    vec3 reflectance = vec3(0);
+    if(specularData.g*255 > 229){
+        metallic = 1.0;
+        reflectance = albedo;
+    }else{
+        reflectance = vec3(specularData.g);
+    }
+    float roughness = pow(1.0 - perceptualSmoothness, 2.0);
+    float smoothness = 1.0 - roughness;
+    float shininess = (1 + smoothness * 100);
+
+    //space conversion
+    vec3 fragFeetPlayerSpace = (gbufferModelViewInverse * vec4(viewSpacePosition, 1.0)).xyz;
+    vec3 fragWorldSpace = fragFeetPlayerSpace + cameraPosition;
+    
+    // Universal normal bias for all environments
+    float normalBias = 0.03;
+    vec3 adjustedFragFeetPlayerSpace = fragFeetPlayerSpace + normalBias * worldGeoNormal;
+    
+    vec3 fragShadowViewSpace = (shadowModelView * vec4(adjustedFragFeetPlayerSpace, 1.0)).xyz;
+    vec4 fragHomogeneousSpace = shadowProjection * vec4(fragShadowViewSpace, 1.0);
+    vec3 fragShadowNdcSpace = fragHomogeneousSpace.xyz / fragHomogeneousSpace.w;
+    float distanceFromPlayerShadowNDC = length(fragShadowNdcSpace.xy);
+    
+    // Adjust shadow distortion for underwater
+    float distortionFactor = 0.1 + distanceFromPlayerShadowNDC;
+    vec3 distortedShadowNdcSpace = vec3(fragShadowNdcSpace.xy / distortionFactor, fragShadowNdcSpace.z);
+    vec3 fragShadowScreenSpace = distortedShadowNdcSpace * 0.5 + 0.5;
+
+    //directions
+    vec3 lightDirection = normalize(mat3(gbufferModelViewInverse) * shadowLightPosition);
+    vec3 reflectionDirection = reflect(-lightDirection, normalWorldSpace);
+    vec3 viewDirection = normalize(cameraPosition - fragWorldSpace);
+
+    //shadow with PCF (Percentage Closer Filtering) for softer shadows
+    float shadowSample = getSoftShadow(fragShadowScreenSpace);
+#if COLORED_SHADOWS_ENABLED
+    float coloredShadowSample = getSoftColoredShadow(fragShadowScreenSpace);
+#endif
+    vec3 shadowColor = texture(shadowcolor0, fragShadowScreenSpace.xy).rgb;
+
+    vec3 shadowMultiplier = vec3(1.0);
+    
+    // Simplified smooth shadow logic - no sharp transitions
+#if COLORED_SHADOWS_ENABLED
+    vec3 coloredShadowTint = mix(vec3(1.0), shadowColor, 0.7);
+#endif
+
+    // Create smooth blending between all shadow types
+#if COLORED_SHADOWS_ENABLED
+    shadowMultiplier = mix(
+        vec3(shadowSample), // Dark shadow
+        mix(coloredShadowTint, vec3(1.0), shadowSample), // Colored shadow
+        coloredShadowSample // Blend factor
+    );
+#else
+    shadowMultiplier = vec3(shadowSample);
+#endif
+
+    //block and sky lighting
+    vec3 torchLightColor = vec3(1.0, 0.7, 0.3)*lightMapCoords.x;
+    vec3 skyLightColor = vec3(1.0,1.0,1.0)*lightMapCoords.y;
+    
+    // Check for red blocks in voxel data and modify torch light color - with artifact prevention
+    
+    //torchLightColor=bytes.rgb*lightMapCoords.x;
+    
+    
+    //vec3 skyLightColor = pow(texture(lightmap, vec2((1/32.0), lightMapCoords.y)).rgb, vec3(2.2));
+    //vec3 torchLightColor = pow(texture(lightmap, vec2(lightMapCoords.x, (1/32.0))).rgb, vec3(2.2));
+     
+    vec3 worldLightDirection = normalize(mat3(gbufferModelViewInverse) * sunPosition);
+    float sunHeight = worldLightDirection.y;
+    bool isNight = sunHeight < -0.05;
+    if(isNight) {
+        // Calculate moon phase multiplier
+        float moonPhaseMultiplier;
+        switch(moonPhase) {
+            case 0: // Full Moon
+                moonPhaseMultiplier = 1.0;
+                break;
+            case 1: // Waning Gibbous
+                moonPhaseMultiplier = 0.85;
+                break;
+            case 2: // Third Quarter
+                moonPhaseMultiplier = 0.6;
+                break;
+            case 3: // Waning Crescent
+                moonPhaseMultiplier = 0.3;
+                break;
+            case 4: // New Moon
+                moonPhaseMultiplier = 0.1;
+                break;
+            case 5: // Waxing Crescent
+                moonPhaseMultiplier = 0.3;
+                break;
+            case 6: // First Quarter
+                moonPhaseMultiplier = 0.6;
+                break;
+            case 7: // Waxing Gibbous
+                moonPhaseMultiplier = 0.85;
+                break;
+            default:
+                moonPhaseMultiplier = 0.5;
+                break;
+        }
+        
+        // Apply moon phase brightness to the final output
+        skyLightColor *= moonPhaseMultiplier;
+    }
+    
+    //ambient
+    vec3 ambientLightDirection = worldGeoNormal;
+    vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
+
+    //brdf
+    vec3 outputColor = albedo * ambientLight + skyLightColor * shadowMultiplier * brdf(lightDirection, viewDirection, roughness, normalWorldSpace, albedo, metallic, reflectance);
+
+    return outputColor;
+}
