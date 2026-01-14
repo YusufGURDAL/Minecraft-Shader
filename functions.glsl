@@ -3,7 +3,7 @@
 // Use numeric values for preprocessor directives to work properly
 #define true 1
 #define false 0
-#define COLORED_SHADOWS_ENABLED true // [true false]
+#define SHADOW_MODE 2 // [0 1 2]
 
 #define gl_EXP 2048
 #define gl_EXP2 2049
@@ -25,6 +25,7 @@ int checkRedBlock(ivec3 voxel_pos, usampler3D voxelSampler) {
 
 
 // Soft shadow functions for smoother shadows
+#if SHADOW_MODE == 1 || SHADOW_MODE == 2
 float getSoftShadow(vec3 shadowScreenSpace) {
     const float shadowBias = 0.00005;
     const int shadowSamples = 9;
@@ -44,8 +45,9 @@ float getSoftShadow(vec3 shadowScreenSpace) {
     
     return shadowSum / float(shadowSamples);
 }
+#endif
 
-#if COLORED_SHADOWS_ENABLED 
+#if SHADOW_MODE == 2 
 float getSoftColoredShadow(vec3 shadowScreenSpace) {
     const float shadowBias = 0.00005;
     const int shadowSamples = 9;
@@ -144,27 +146,30 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
     vec3 viewDirection = normalize(cameraPosition - fragWorldSpace);
 
     //shadow with PCF (Percentage Closer Filtering) for softer shadows
+#if SHADOW_MODE == 1 || SHADOW_MODE == 2
     float shadowSample = getSoftShadow(fragShadowScreenSpace);
-#if COLORED_SHADOWS_ENABLED
+#if SHADOW_MODE == 2
     float coloredShadowSample = getSoftColoredShadow(fragShadowScreenSpace);
 #endif
+#endif
+
     vec3 shadowColor = texture(shadowcolor0, fragShadowScreenSpace.xy).rgb;
 
     vec3 shadowMultiplier = vec3(1.0);
     
     // Simplified smooth shadow logic - no sharp transitions
-#if COLORED_SHADOWS_ENABLED
+#if SHADOW_MODE == 2
     vec3 coloredShadowTint = mix(vec3(1.0), shadowColor, 0.7);
 #endif
 
     // Create smooth blending between all shadow types
-#if COLORED_SHADOWS_ENABLED
+#if SHADOW_MODE == 2
     shadowMultiplier = mix(
         vec3(shadowSample), // Dark shadow
         mix(coloredShadowTint, vec3(1.0), shadowSample), // Colored shadow
         coloredShadowSample // Blend factor
     );
-#else
+#elif SHADOW_MODE == 1
     shadowMultiplier = vec3(shadowSample);
 #endif
 

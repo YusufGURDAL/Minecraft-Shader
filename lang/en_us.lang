@@ -15,5 +15,6 @@ option.shadowMapResolution = Shadow Map Resolution
 value.VOLUMETRIC_LIGHT_ENABLED.true = ON
 value.VOLUMETRIC_LIGHT_ENABLED.false = OFF
 
-value.COLORED_SHADOWS_ENABLED.true = Enabled
-value.COLORED_SHADOWS_ENABLED.false = Disabled
+value.SHADOW_MODE.0 = Disabled
+value.SHADOW_MODE.1 = Basic
+value.SHADOW_MODE.2 = Fancy
