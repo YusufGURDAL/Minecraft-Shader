@@ -48,7 +48,7 @@ layout (r32ui) uniform uimage3D cimage1;
 void main()
 {
     texCoord = vaUV0;
-	lightMapCoords = (vaUV2 / 256.0) * (33.05/32.0) - (1.05/32.0);
+	lightMapCoords = (vaUV2 / 256.0) * (33.05/32.0) - (1.05/32.0);//my solution
 	//lightMapCoords = vaUV2 * (1.0/256.0) + (1.0/32.0);
 	foliageColor = vaColor;
 	normal = normalMatrix * vaNormal; // this gives us the normal in view space
@@ -80,7 +80,7 @@ void main()
 		) //for one vertex per face, write if in range
 		{
 			//pick data to send
-			#define VISUALIZED_DATA 4 //[0 1 2 3 4]
+			#define VISUALIZED_DATA 4 //[0 1 2 3 4 5]
 			#if VISUALIZED_DATA == 0
 				//visualize color average
 				vec4 voxel_data =	vec4(textureLod(gtexture, texCoord,log2(float(textureSize(gtexture, 0).x))).rgb* foliageColor.rgb,1.);
@@ -99,7 +99,11 @@ void main()
 			#endif
 			#if VISUALIZED_DATA == 4
 				//certain block by id
-				vec4 voxel_data =	mc_Entity.x == 1.? vec4(1.,0.,0.,1.) : mc_Entity.x == 2.? vec4(0.,0.,1.,1.) : mc_Entity.x == 3.? vec4(1.,1.,0.,1.) : mc_Entity.x == 4.? vec4(0.,1.,0.,1.) : vec4(0.2);
+				vec4 voxel_data =	mc_Entity.x == 1.? vec4(1.,0.,0.,0.) : mc_Entity.x == 2.? vec4(0.,0.,1.,0.) : mc_Entity.x == 3.? vec4(0.,0.,0.,1.) : mc_Entity.x == 4.? vec4(0.,1.,0.,0.) : vec4(0.2);
+			#endif
+			#if VISUALIZED_DATA == 5
+				//certain block by id
+				vec4 voxel_data =	mc_Entity.x == 1.? vec4(1.,0.,0.,0.) : mc_Entity.x == 2.? vec4(0.,0.,1.,0.) : mc_Entity.x == 3.? vec4(0.,0.,0.,1.) : mc_Entity.x == 4.? vec4(0.,1.,0.,0.) : vec4(0.2);
 			#endif
 			
 			//visialize player position
@@ -114,8 +118,6 @@ void main()
 			//write to 3d image	 //imageStore(  //imageAtomicMax(
 			imageAtomicMax( cimage1, voxel_pos, integerValue );	
 
-			
-			
 		}
 	#endif
 

@@ -40,6 +40,7 @@ uniform vec3 fogColor;
 uniform int isEyeInWater;
 uniform int fogMode;
 uniform int moonPhase;
+uniform int frameCounter;
 
 uniform float alphaTestRef;
 uniform float fogDensity;
@@ -48,6 +49,8 @@ uniform float fogEnd;
 uniform float far;
 
 uniform usampler3D cSampler1;
+uniform sampler3D cSampler2_colored_light;
+
 //outputs
 layout(location = 0) out vec4 fragColor;
 
@@ -100,7 +103,7 @@ void main(){
         bytes = unpackUnorm4x8(texture3D(cSampler1, vec3(voxel_pos)/vec3(VOXEL_AREA)).r);
         //fragColor.rgb = bytes.rgb;
         //fragColor.rgb = applyVoxelColoredLighting(fragColor.rgb, voxel_pos, cSampler1, lightmap, lightMapCoords);
-        #define VISUALIZED_DATA 4 //[0 1 2 3 4]
+        #define VISUALIZED_DATA 4 //[0 1 2 3 4 5]
         #if VISUALIZED_DATA == 3
             fragColor=bytes;
         #endif
@@ -108,7 +111,7 @@ void main(){
             // Check if any voxel within 3-block radius has bytes.r > 0.9
             //float distanceFromLight=distance(vec3(voxel_pos+10.0),voxel_pos);
             //fragColor.rgb=vec3(mix(vec3(1.0,0.0,0.0),vec3(1.0,0.0,0.0),1.0-distanceFromLight));
-            
+            /*
             vec4 lightAccumulation = vec4(0.0);
             int lightCount = 0;
             
@@ -146,8 +149,19 @@ void main(){
             if(lightCount > 0) {
                 // Mix accumulated light with original color
                 fragColor = clamp(fragColor + lightAccumulation, 0.0, 1.0);
-            }
-
+            }*/
+            //my solution
+        #endif
+        #if VISUALIZED_DATA == 5
+            vec3 smooth_pos = vec3(foot_pos2+fract(cameraPosition)+VOXEL_RADIUS);
+            ivec3 double_buffer_offset_write = mod(frameCounter, 2) == 0 ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
+            vec3 voxel_pos_colored_lighting = smooth_pos + vec3(double_buffer_offset_write);
+            bytes = texture(cSampler2_colored_light, vec3(voxel_pos_colored_lighting)/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA));
+            
+            fragColor += fragColor * vec4(1.0, 0.0, 0.0, 1.0) * bytes.r;
+            fragColor += fragColor * vec4(0.0, 1.0, 0.0, 1.0) * bytes.g;
+            fragColor += fragColor * vec4(0.0, 0.5, 0.8, 1.0) * bytes.b;
+            fragColor += fragColor * vec4(0.8, 0.5, 0.1, 1.0) * bytes.a;
         #endif
         // Debug alignment visualization
         #define DEBUG_ALIGHNMENT 1 //[0 1]

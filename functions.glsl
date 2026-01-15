@@ -174,12 +174,15 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
 #endif
 
     //block and sky lighting
-    vec3 torchLightColor = vec3(1.0, 0.7, 0.3)*lightMapCoords.x;
+    
+    vec3 torchLightColor = vec3(1.0, 1.0, 1.0)*lightMapCoords.x;
     vec3 skyLightColor = vec3(1.0,1.0,1.0)*lightMapCoords.y;
     
+    //my solution
+
     // Check for red blocks in voxel data and modify torch light color - with artifact prevention
     
-    //torchLightColor=bytes.rgb*lightMapCoords.x;
+    //vec3 torchLightColor=bytes.rgb*lightMapCoords.x;
     
     
     //vec3 skyLightColor = pow(texture(lightmap, vec2((1/32.0), lightMapCoords.y)).rgb, vec3(2.2));
@@ -227,7 +230,8 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
     
     //ambient
     vec3 ambientLightDirection = worldGeoNormal;
-    vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
+    //vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
+    vec3 ambientLight = pow((torchLightColor + 0.2 * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
 
     //brdf
     vec3 outputColor = albedo * ambientLight + skyLightColor * shadowMultiplier * brdf(lightDirection, viewDirection, roughness, normalWorldSpace, albedo, metallic, reflectance);
