@@ -45,11 +45,16 @@ uniform sampler2D gtexture;
 uniform float frameTimeCounter;
 layout (r32ui) uniform uimage3D cimage1;
 
+#define LIGHT_STYLE 0 //[0 1]
+
 void main()
 {
     texCoord = vaUV0;
+#if LIGHT_STYLE == 0
 	lightMapCoords = (vaUV2 / 256.0) * (33.05/32.0) - (1.05/32.0);//my solution
-	//lightMapCoords = vaUV2 * (1.0/256.0) + (1.0/32.0);
+#else
+	lightMapCoords = vaUV2 * (1.0/256.0) + (1.0/32.0);
+#endif
 	foliageColor = vaColor;
 	normal = normalMatrix * vaNormal; // this gives us the normal in view space
 	normal = mat3(gbufferModelViewInverse) * normal; // this converts the normal to world/player space

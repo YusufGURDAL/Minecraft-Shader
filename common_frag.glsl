@@ -157,11 +157,15 @@ void main(){
             ivec3 double_buffer_offset_write = mod(frameCounter, 2) == 0 ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
             vec3 voxel_pos_colored_lighting = smooth_pos + vec3(double_buffer_offset_write);
             bytes = texture(cSampler2_colored_light, vec3(voxel_pos_colored_lighting)/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA));
-            
-            fragColor += fragColor * vec4(1.0, 0.0, 0.0, 1.0) * bytes.r;
-            fragColor += fragColor * vec4(0.0, 1.0, 0.0, 1.0) * bytes.g;
-            fragColor += fragColor * vec4(0.0, 0.5, 0.8, 1.0) * bytes.b;
-            fragColor += fragColor * vec4(0.8, 0.5, 0.1, 1.0) * bytes.a;
+            vec4 light = vec4(0.0);
+
+            light += vec4(1.0, 0.0, 0.0, 1.0) * bytes.r;
+            light += vec4(0.0, 1.0, 0.0, 1.0) * bytes.g;
+            light += vec4(0.0, 0.4, 1.0, 1.0) * bytes.b;
+            light += vec4(0.8, 0.5, 0.1, 1.0) * bytes.a;
+
+            fragColor = (light * fragColor) + (fragColor * pow((1.0 - lightMapCoords.x), 2.2));
+                      //(light * fragColor * lightMapCoords.x) + (fragColor * (1.0 - lightMapCoords.x));
         #endif
         // Debug alignment visualization
         #define DEBUG_ALIGHNMENT 1 //[0 1]

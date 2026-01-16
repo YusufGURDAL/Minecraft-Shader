@@ -4,6 +4,7 @@
 #define true 1
 #define false 0
 #define SHADOW_MODE 2 // [0 1 2]
+#define LIGHT_STYLE 0 // [0 1]
 
 #define gl_EXP 2048
 #define gl_EXP2 2049
@@ -174,20 +175,19 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
 #endif
 
     //block and sky lighting
-    
-    vec3 torchLightColor = vec3(1.0, 1.0, 1.0)*lightMapCoords.x;
-    vec3 skyLightColor = vec3(1.0,1.0,1.0)*lightMapCoords.y;
-    
+#if LIGHT_STYLE == 0
+    vec3 torchLightColor = vec3(1.0)*lightMapCoords.x;
+    vec3 skyLightColor = vec3(1.0)*lightMapCoords.y;
     //my solution
 
     // Check for red blocks in voxel data and modify torch light color - with artifact prevention
     
     //vec3 torchLightColor=bytes.rgb*lightMapCoords.x;
-    
-    
-    //vec3 skyLightColor = pow(texture(lightmap, vec2((1/32.0), lightMapCoords.y)).rgb, vec3(2.2));
-    //vec3 torchLightColor = pow(texture(lightmap, vec2(lightMapCoords.x, (1/32.0))).rgb, vec3(2.2));
-     
+#else
+    vec3 skyLightColor = pow(texture(lightmap, vec2((1/32.0), lightMapCoords.y)).rgb, vec3(2.2));
+    vec3 torchLightColor = pow(texture(lightmap, vec2(lightMapCoords.x, (1/32.0))).rgb, vec3(2.2));
+#endif
+
     vec3 worldLightDirection = normalize(mat3(gbufferModelViewInverse) * sunPosition);
     float sunHeight = worldLightDirection.y;
     bool isNight = sunHeight < -0.05;
@@ -230,9 +230,11 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
     
     //ambient
     vec3 ambientLightDirection = worldGeoNormal;
-    //vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
-    vec3 ambientLight = pow((torchLightColor + 0.2 * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
-
+#if LIGHT_STYLE == 0
+    vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
+#else
+    vec3 ambientLight = (torchLightColor + 0.2 * skyLightColor) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
+#endif
     //brdf
     vec3 outputColor = albedo * ambientLight + skyLightColor * shadowMultiplier * brdf(lightDirection, viewDirection, roughness, normalWorldSpace, albedo, metallic, reflectance);
 

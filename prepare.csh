@@ -107,27 +107,27 @@ void main()
 
         neighbor = ivec3(1.,0.,0.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = light.b - 1./15.;
+        total_light.b = light.b - 1./10.;
 
         neighbor = ivec3(-1.,0.,0.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = max(total_light.b, light.b - 1./15.);
+        total_light.b = max(total_light.b, light.b - 1./10.);
 
         neighbor = ivec3(0.,0.,1.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = max(total_light.b, light.b - 1./15.);
+        total_light.b = max(total_light.b, light.b - 1./10.);
 
         neighbor = ivec3(0.,0.,-1.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = max(total_light.b, light.b - 1./15.);
+        total_light.b = max(total_light.b, light.b - 1./10.);
 
         neighbor = ivec3(0.,1.,0.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = max(total_light.b, light.b - 1./15.);
+        total_light.b = max(total_light.b, light.b - 1./10.);
 
         neighbor = ivec3(0.,-1.,0.);
         light = imageLoad(cimage2_colored_light, voxel_pos_old+neighbor);
-        total_light.b = max(total_light.b, light.b - 1./15.);
+        total_light.b = max(total_light.b, light.b - 1./10.);
 
         total_light = max(total_light, 0.);
         color_effect.b = max(total_light.b, color_effect.b);
