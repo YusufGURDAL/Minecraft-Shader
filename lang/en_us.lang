@@ -8,6 +8,7 @@ option.VOLUMETRIC_LIGHT_SAMPLES = Volumetric Light Samples
 option.VOLUMETRIC_LIGHT_INTENSITY = Volumetric Light Intensity
 option.VOLUMETRIC_LIGHT_DENSITY = Volumetric Light Density
 
+option.SHADOW_CULLING = Shadow Culling
 option.COLORED_SHADOWS_ENABLED = Colored Shadows
 option.shadowMapResolution = Shadow Map Resolution
 option.shadowDistance = Shadow Distance
@@ -15,6 +16,9 @@ option.shadowDistance = Shadow Distance
 #values
 value.VOLUMETRIC_LIGHT_ENABLED.true = ON
 value.VOLUMETRIC_LIGHT_ENABLED.false = OFF
+
+value.SHADOW_CULLING.true = Enabled
+value.SHADOW_CULLING.false = Disabled
 
 value.LIGHT_STYLE.0 = benim tarz
 value.LIGHT_STYLE.1 = normal tarz

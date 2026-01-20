@@ -1,0 +1,16 @@
+vec4 tech_white = vec4(0.957, 0.992, 1.0, 1.0);
+vec4 lava_orange = vec4(0.969, 0.408, 0.024, 1.0);
+vec4 portal_purple = vec4(0.635, 0.2, 0.922, 1.0);
+vec4 soul_blue = vec4(0.212, 0.851, 0.902, 1.0);
+vec4 torch_yellow = vec4(1.0, 0.741, 0.18, 1.0);
+vec4 redstone_red = vec4(1.0, 0.0, 0.0, 1.0);
+vec4 amethyst_pink = vec4(0.906, 0.561, 1.0, 1.0);
+vec4 glowstone_beige = vec4(1.0, 0.878, 0.569, 1.0);
+vec4 magic_blue = vec4(0.071, 0.204, 1.0, 1.0);
+vec4 underwater_turquoise = vec4(0.18, 1.0, 0.961, 1.0);
+vec4 organic_amber = vec4(1.0, 0.675, 0.071, 1.0);
+vec4 copper_green = vec4(0.525, 0.792, 0.349, 1.0);
+vec4 end_portal_black = vec4(0.424, 0.439, 0.698, 1.0);
+vec4 frog_yellow = vec4(0.976, 0.937, 0.647, 1.0);
+vec4 frog_green = vec4(0.718, 0.945, 0.737, 1.0);
+vec4 frog_pink = vec4(0.855, 0.451, 0.871, 1.0);

@@ -1,5 +1,7 @@
 #version 460
 
+#include "light_color.glsl"
+
 //inputs
 in vec3 vaPosition;
 in vec2 vaUV0;
@@ -74,11 +76,11 @@ void main()
 	#define VOXEL_AREA 128 //[32 64 128]
 	#define VOXEL_RADIUS (VOXEL_AREA/2)
 	block_centered_relative_pos = foot_pos + at_midBlock.xyz/64.0 +fract(cameraPosition);
-	ivec3 voxel_pos = ivec3(block_centered_relative_pos + VOXEL_RADIUS);
 		
 	#define WHERE_TO_VOXELIZE 2 //[1 2]
 	#if WHERE_TO_VOXELIZE == 1	
-		
+
+		ivec3 voxel_pos = ivec3(block_centered_relative_pos + VOXEL_RADIUS);	
 		//write voxel data
 		if(mod(gl_VertexID,4)==0  //only write for 1 vertex
 			&& clamp(voxel_pos,0,VOXEL_AREA) == voxel_pos //and in voxel range
@@ -108,7 +110,24 @@ void main()
 			#endif
 			#if VISUALIZED_DATA == 5
 				//certain block by id
-				vec4 voxel_data =	mc_Entity.x == 1.? vec4(1.,0.,0.,0.) : mc_Entity.x == 2.? vec4(0.,0.,1.,0.) : mc_Entity.x == 3.? vec4(0.,0.,0.,1.) : mc_Entity.x == 4.? vec4(0.,1.,0.,0.) : vec4(0.2);
+				vec4 voxel_data = 
+				mc_Entity.x == 1.0 ? tech_white : 
+				mc_Entity.x == 2.0 ? lava_orange : 
+				mc_Entity.x == 3.0 ? portal_purple : 
+				mc_Entity.x == 4.0 ? soul_blue : 
+				mc_Entity.x == 5.0 ? torch_yellow : 
+				mc_Entity.x == 6.0 ? redstone_red : 
+				mc_Entity.x == 7.0 ? amethyst_pink : 
+				mc_Entity.x == 8.0 ? glowstone_beige :
+				mc_Entity.x == 9.0 ? magic_blue : 
+				mc_Entity.x == 10.0 ? underwater_turquoise : 
+				mc_Entity.x == 11.0 ? organic_amber : 
+				mc_Entity.x == 12.0 ? copper_green :
+				mc_Entity.x == 13.0 ? end_portal_black :
+				mc_Entity.x == 14.0 ? frog_yellow :
+				mc_Entity.x == 15.0 ? frog_green :
+				mc_Entity.x == 16.0 ? frog_pink :
+    vec4(0.0);
 			#endif
 			
 			//visialize player position
