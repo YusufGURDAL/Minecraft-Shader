@@ -87,27 +87,16 @@ void main(){
     vec4 bytes;
     
     //lighting
-    vec3 outputColor = lightingCaclulations(bytes, albedo);
-    vec4 darkArea = (1.0 - lightMapCoords.y) * pow(vec4(outputColor, transparency), vec4(1/2.2));
-	vec4 sunArea = lightMapCoords.y * pow(vec4(outputColor, transparency), vec4(1/1));
-    //fragColor = defaultColor;
-	//vec4(lightMapCoords.r,0.0,0.0,1.0);
-	//vec4(0.0,lightMapCoords.g,0.0,1.0);
-	//vec4(lightMapCoords.r,lightMapCoords.g,0.0,1.0);
-	//vec4(outputColor,1.0);
-    // Apply voxel-based colored lighting
-    //fragColor.r=1.0;
+    vec3 outputColor = lightingCaclulations(albedo);
+    vec4 defaultColor = pow(vec4(outputColor, transparency), vec4(1/2.2));
     if(clamp(voxel_pos, 0, VOXEL_AREA) == voxel_pos) {
         bytes = unpackUnorm4x8(texture3D(cSampler1, vec3(voxel_pos)/vec3(VOXEL_AREA)).r);
-        //fragColor.rgb = bytes.rgb;
-        //fragColor.rgb = applyVoxelColoredLighting(fragColor.rgb, voxel_pos, cSampler1, lightmap, lightMapCoords);
+        
         #define VISUALIZED_DATA 5 //[0 1 2 3 4 5]
         #if VISUALIZED_DATA == 2
             fragColor=bytes;
         #endif
         #if VISUALIZED_DATA == 3
-            //float distanceFromLight=distance(vec3(voxel_pos+10.0),voxel_pos);
-            //fragColor.rgb=vec3(mix(vec3(1.0,0.0,0.0),vec3(1.0,0.0,0.0),1.0-distanceFromLight));
             
             vec4 lightAccumulation = vec4(0.0);
             int lightCount = 0;
@@ -221,26 +210,28 @@ void main(){
             finalAccumulatedLight = max(finalAccumulatedLight, vec3(0.0));
 
             // Sonucu uygula
-            fragColor.rgb = (fragColor.rgb * finalAccumulatedLight) + (fragColor.rgb * (1.0 - lightMapCoords.x));
+            defaultColor.rgb = (defaultColor.rgb * finalAccumulatedLight) + (defaultColor.rgb * (1.0 - lightMapCoords.x));
         #endif
         #if VISUALIZED_DATA == 5
-            vec3 smooth_pos = vec3(foot_pos2+fract(cameraPosition)+VOXEL_RADIUS);
+            vec3 smooth_pos = vec3(foot_pos2 + fract(cameraPosition) + VOXEL_RADIUS);
+            vec3 smooth_pos_offset = smooth_pos + normalize(normals_face_world) * 0.9;
             ivec3 double_buffer_offset_write = mod(frameCounter, 2) == 0 ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
             vec3 voxel_pos_colored_lighting = smooth_pos + vec3(double_buffer_offset_write);
-            vec4 bytes[15];
-            for(int i=0; i<LAYER_COUNT; i++){
-                bytes[i] = texture(cSampler1_colored_light, vec3(voxel_pos_colored_lighting.x,voxel_pos_colored_lighting.y,voxel_pos_colored_lighting.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT));
-            }
+            vec3 voxel_pos_offset = smooth_pos_offset + vec3(double_buffer_offset_write);
+            //vec4 bytes[15];
             vec3 light = vec3(0.0);
-
+            vec3 lightOffset = vec3(0.0);
             for(int i=0; i<LAYER_COUNT; i++){
-                light += bytes[i].rgb;
+                vec3 currentLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_colored_lighting.x,voxel_pos_colored_lighting.y,voxel_pos_colored_lighting.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
+                vec3 offsetLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_offset.x,voxel_pos_offset.y,voxel_pos_offset.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
+                lightOffset = 1.0 - (1.0 - lightOffset) * (1.0 - offsetLayerColor);
+                light = 1.0 - (1.0 - light) * (1.0 - currentLayerColor);
             }
-            
-            darkArea.rgb = (darkArea.rgb * light) + (darkArea.rgb * (1.0 - lightMapCoords.x));
-            sunArea.rgb = (sunArea.rgb * light) + (sunArea.rgb * pow(1.0 - lightMapCoords.x,1/2.2));
-
-            
+            vec3 diffRGB = lightOffset - light;
+            diffRGB = clamp(diffRGB, vec3(-0.2), vec3(0.2));
+            vec3 shadeFactor = vec3(1.0) + (diffRGB * 5.0);
+            light *= shadeFactor;
+            defaultColor.rgb = defaultColor.rgb * light + defaultColor.rgb * (1.0 - lightMapCoords.x);            
         #endif
         // Debug alignment visualization
         #define DEBUG_ALIGHNMENT 1 //[0 1]
@@ -248,9 +239,7 @@ void main(){
             fragColor.rgb = fract(vec3(voxel_pos + floor(cameraPosition))/5.);
         #endif
     }
-    darkArea = pow(vec4(darkArea.rgb, transparency),vec4(1/1));
-    sunArea = pow(vec4(sunArea.rgb, transparency),vec4(1/2.2));
-    fragColor = max(darkArea , sunArea);
+    fragColor = defaultColor;
     float blend = computeFog(distanceFromCamera, fogMode, fogStart, fogEnd);
     vec4 foggedColor = fragColor * blend + vec4(fogColor, 1.0) * (1.0 - blend);
     blend = computeDistanceFog(cylinderDistanceFromCamera, far-16, far);

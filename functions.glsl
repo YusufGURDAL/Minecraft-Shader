@@ -14,17 +14,6 @@
 
 // Function to get voxel position
 
-
-// Function to check if a voxel has red block data
-int checkRedBlock(ivec3 voxel_pos, usampler3D voxelSampler) {
-	if(clamp(voxel_pos, ivec3(0), ivec3(VOXEL_AREA)) != voxel_pos) {
-		return 0;
-	}
-	vec4 bytes = unpackUnorm4x8(texture3D(voxelSampler, vec3(voxel_pos)/vec3(VOXEL_AREA)).r);
-	return (bytes.r > 0.9) ? 1 : 0;
-}
-
-
 // Soft shadow functions for smoother shadows
 #if SHADOW_MODE == 1 || SHADOW_MODE == 2
 float getSoftShadow(vec3 shadowScreenSpace) {
@@ -99,8 +88,10 @@ float computeDistanceFog(float distanceFromCamera, float fogStart, float fogEnd)
 }
 const float LM_SCALE  = 33.05 / 32.0;
 const float LM_OFFSET = 1.05 / 32.0;
-vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
+vec3 lightingCaclulations(vec3 albedo){
     //normal calc
+    vec3 worldLightDirection = normalize(mat3(gbufferModelViewInverse) * sunPosition);
+    float sunHeight = worldLightDirection.y;
     vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * geoNormal;
     vec3 worldTangent = mat3(gbufferModelViewInverse) * tangent.xyz;
     vec4 normalData = texture(normals,texCoord) * 2.0 - 1.0;
@@ -177,19 +168,19 @@ vec3 lightingCaclulations(vec4 bytes, vec3 albedo){
     //block and sky lighting
 #if LIGHT_STYLE == 0
     vec3 torchLightColor = vec3(1.0)*lightMapCoords.x;
-    vec3 skyLightColor = vec3(1.0)*lightMapCoords.y;
-    //my solution
-
-    // Check for red blocks in voxel data and modify torch light color - with artifact prevention
     
+    vec3 dayColor = vec3(1.0, 1.0, 1.0);
+    vec3 nightColor = vec3(0.05, 0.06, 0.15);
+    float dayNightMix = smoothstep(-0.2, 0.2, sunHeight);
+    vec3 currentSkyTint = mix(nightColor, dayColor, dayNightMix);
+    vec3 skyLightColor = currentSkyTint * lightMapCoords.y;
+    //my solution
     //vec3 torchLightColor=bytes.rgb*lightMapCoords.x;
 #else
     vec3 skyLightColor = pow(texture(lightmap, vec2((1/32.0), lightMapCoords.y)).rgb, vec3(2.2));
     vec3 torchLightColor = pow(texture(lightmap, vec2(lightMapCoords.x, (1/32.0))).rgb, vec3(2.2));
 #endif
 
-    vec3 worldLightDirection = normalize(mat3(gbufferModelViewInverse) * sunPosition);
-    float sunHeight = worldLightDirection.y;
     bool isNight = sunHeight < -0.05;
     if(isNight) {
         // Calculate moon phase multiplier

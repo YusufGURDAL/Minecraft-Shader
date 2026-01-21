@@ -11,6 +11,7 @@ uniform mat4 shadowModelViewInverse;
 
 uniform float frameTimeCounter;
 layout (r32ui) uniform uimage3D cimage1;
+layout (r32ui) uniform uimage3D cimage2;
 uniform sampler2D gtexture;
 
 void main()
