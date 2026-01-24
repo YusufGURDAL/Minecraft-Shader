@@ -1,4 +1,4 @@
-#version 460 
+#version 460 compatibility
 
 #extension GL_EXT_gpu_shader4 : enable
 
@@ -16,6 +16,7 @@ in vec2 lightMapCoords;
 in vec3 geoNormal;
 in vec3 viewSpacePosition;
 in vec3 worldSpaceVertexPosition;
+in vec4 shadowPos;
 in vec4 foliageColor;
 in vec4 tangent;
 in float distanceFromCamera;
@@ -36,6 +37,7 @@ uniform mat4 shadowProjection;
 uniform mat4 shadowModelView;
 uniform mat4 gbufferModelViewInverse;
 
+uniform ivec2 eyeBrightnessSmooth;
 uniform vec3 cameraPosition;
 uniform vec3 shadowLightPosition;
 uniform vec3 sunPosition;
@@ -56,7 +58,8 @@ uniform usampler3D cSampler1;
 uniform sampler3D cSampler1_colored_light;
 
 //outputs
-layout(location = 0) out vec4 fragColor;
+//layout(location = 0) out vec4 fragColor;
+#define fragColor gl_FragColor
 
 in vec3 block_centered_relative_pos;
 in vec3 foot_pos2;
@@ -218,20 +221,30 @@ void main(){
             ivec3 double_buffer_offset_write = mod(frameCounter, 2) == 0 ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
             vec3 voxel_pos_colored_lighting = smooth_pos + vec3(double_buffer_offset_write);
             vec3 voxel_pos_offset = smooth_pos_offset + vec3(double_buffer_offset_write);
-            //vec4 bytes[15];
+            
             vec3 light = vec3(0.0);
+            vec3 centerLight = vec3(0.0);
             vec3 lightOffset = vec3(0.0);
+
+            vec3 centerLayerColor;
+            vec3 currentLayerColor;
+            vec3 offsetLayerColor;
+
             for(int i=0; i<LAYER_COUNT; i++){
-                vec3 currentLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_colored_lighting.x,voxel_pos_colored_lighting.y,voxel_pos_colored_lighting.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
-                vec3 offsetLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_offset.x,voxel_pos_offset.y,voxel_pos_offset.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
+                centerLayerColor = unpackUnorm4x8(texture3D(cSampler1, vec3(voxel_pos.x,voxel_pos.y,voxel_pos.z+(VOXEL_AREA*i)+0.5)/vec3(VOXEL_AREA, VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).r).rgb;
+                currentLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_colored_lighting.x,voxel_pos_colored_lighting.y,voxel_pos_colored_lighting.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
+                offsetLayerColor = texture(cSampler1_colored_light, vec3(voxel_pos_offset.x,voxel_pos_offset.y,voxel_pos_offset.z+(VOXEL_AREA*i))/vec3(VOXEL_AREA, 2*VOXEL_AREA, VOXEL_AREA*LAYER_COUNT)).rgb;
                 lightOffset = 1.0 - (1.0 - lightOffset) * (1.0 - offsetLayerColor);
                 light = 1.0 - (1.0 - light) * (1.0 - currentLayerColor);
+                centerLight += centerLayerColor;
             }
+
             vec3 diffRGB = lightOffset - light;
             diffRGB = clamp(diffRGB, vec3(-0.2), vec3(0.2));
             vec3 shadeFactor = vec3(1.0) + (diffRGB * 5.0);
             light *= shadeFactor;
-            defaultColor.rgb = defaultColor.rgb * light + defaultColor.rgb * (1.0 - lightMapCoords.x);            
+
+            defaultColor.rgb =  (centerLight.rgb+light)*pow(albedo,vec3(1/2.2)) + defaultColor.rgb;
         #endif
         // Debug alignment visualization
         #define DEBUG_ALIGHNMENT 1 //[0 1]

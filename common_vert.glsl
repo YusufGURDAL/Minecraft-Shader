@@ -1,22 +1,22 @@
-#version 460
+#version 460 compatibility
 
 #include "light_color.glsl"
 
 //inputs
-in vec3 vaPosition;
-in vec2 vaUV0;
-in vec4 vaColor;
-in ivec2 vaUV2;
-in vec3 vaNormal;
+//in vec3 vaPosition;
+//in vec2 vaUV0;
+//in vec4 vaColor;
+//in ivec2 vaUV2;
+//in vec3 vaNormal;
 in vec3 mc_Entity;
 in vec4 at_tangent;
 
 //uniforms
 uniform vec3 chunkOffset;
 uniform vec3 cameraPosition;
-uniform mat3 normalMatrix;
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
+//uniform mat3 normalMatrix;
+//uniform mat4 modelViewMatrix;
+//uniform mat4 projectionMatrix;
 uniform mat4 gbufferModelViewInverse;
 
 //outputs
@@ -51,25 +51,26 @@ layout (r32ui) uniform uimage3D cimage1;
 
 void main()
 {
-    texCoord = vaUV0;
+    texCoord = gl_MultiTexCoord0.xy;
+    vec2 lmCoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
 #if LIGHT_STYLE == 0
-	lightMapCoords = (vaUV2 / 256.0) * (33.05/32.0) - (1.05/32.0);//my solution
+	lightMapCoords = lmCoord * (33.05/32.0) - (1.05/32.0);//my solution
 #else
-	lightMapCoords = vaUV2 * (1.0/256.0) + (1.0/32.0);
+	lightMapCoords = lmCoord; + (1.0/32.0);
 #endif
-	foliageColor = vaColor;
-	normal = normalMatrix * vaNormal; // this gives us the normal in view space
+	foliageColor = gl_Color;
+	normal = gl_NormalMatrix * gl_Normal; // this gives us the normal in view space
 	normal = mat3(gbufferModelViewInverse) * normal; // this converts the normal to world/player space
 
 
 
-    vec3 view_pos = vec4(modelViewMatrix * vec4(vaPosition + chunkOffset, 1.0)).xyz;
+    vec3 view_pos = vec4(gl_ModelViewMatrix * gl_Vertex).xyz;
 	vec3 foot_pos = (gbufferModelViewInverse * vec4( view_pos ,1.) ).xyz;
 	vec3 world_pos = foot_pos + cameraPosition;
 	
 	//for reconstructing in fragment shader
 	foot_pos2 = foot_pos;
-	normals_face_world = normalize(normalMatrix * normal);
+	normals_face_world = normalize(gl_NormalMatrix * normal);
 	normals_face_world = (gbufferModelViewInverse * vec4( normals_face_world ,1.) ).xyz;
 	
 	//voxel map position
@@ -146,14 +147,14 @@ void main()
 	#endif
 
     // Modern transformation instead of deprecated ftransform()
-    tangent = vec4(normalize(normalMatrix * at_tangent.rgb), at_tangent.a);
-    geoNormal = normalMatrix * vaNormal;
-    vec4 viewSpacePositionVec4 = modelViewMatrix * vec4(vaPosition + chunkOffset, 1.0);
+    tangent = vec4(normalize(gl_NormalMatrix * at_tangent.rgb), at_tangent.a);
+    geoNormal = gl_NormalMatrix * gl_Normal;
+    vec4 viewSpacePositionVec4 = gl_ModelViewMatrix * gl_Vertex;
     viewSpacePosition = viewSpacePositionVec4.xyz;
     
     worldSpaceVertexPosition = cameraPosition + (gbufferModelViewInverse * viewSpacePositionVec4).xyz;
     distanceFromCamera = distance(worldSpaceVertexPosition, cameraPosition);
     cylinderDistanceFromCamera = cylDistance(worldSpaceVertexPosition, cameraPosition);
     
-    gl_Position = projectionMatrix * viewSpacePositionVec4;
+    gl_Position = gl_ProjectionMatrix * viewSpacePositionVec4;
 }

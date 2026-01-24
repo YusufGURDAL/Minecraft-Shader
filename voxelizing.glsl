@@ -9,13 +9,13 @@
 */
 #include "light_color.glsl"
 
-vec3 shadow_view_pos = vec4(gl_ModelViewMatrix*gl_Vertex).xyz;
-vec3 foot_pos = (shadowModelViewInverse * vec4(shadow_view_pos, 1.0)).xyz;
-vec3 world_pos = foot_pos + cameraPosition;
-
 #define VOXEL_AREA 128 //[32 64 128]
 #define VOXEL_RADIUS (VOXEL_AREA/2)
 #define LAYER_COUNT 15
+
+
+vec4 viewPos = gl_ModelViewMatrix * gl_Vertex;
+vec3 foot_pos = (shadowModelViewInverse * vec4(viewPos.xyz, 1.0)).xyz;
 
 vec3 block_centered_relative_pos = foot_pos + at_midBlock.xyz/64.0 + fract(cameraPosition);
 ivec3 voxel_pos = ivec3(block_centered_relative_pos + VOXEL_RADIUS);

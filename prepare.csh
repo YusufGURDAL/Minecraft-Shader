@@ -22,6 +22,9 @@ uniform int frameCounter;
 uniform ivec3 cameraPositionInt;
 uniform ivec3 previousCameraPositionInt;
 
+const float MAX_LIGHT_DISTANCE = 32.0;
+const float STEP_COST = 1.0 / MAX_LIGHT_DISTANCE;
+
 void main()
 {
 #define RUN_THIS_COMPUTE_SHADER 1 //[0 1]
@@ -38,38 +41,11 @@ void main()
     ivec3 double_buffer_offset_write = (mod(frameCounter, 2) == 0) ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
     ivec3 double_buffer_offset_read  = (mod(frameCounter, 2) != 0) ? ivec3(0, VOXEL_AREA, 0) : ivec3(0);
 
-    for (int i = 0; i < LAYER_COUNT; i++) {
-        int current_z_offset = i * Z_OFFSET_STEP;
-        
-        ivec3 base_pos = ivec3(orig_voxel_pos.x, orig_voxel_pos.y, orig_voxel_pos.z + current_z_offset);
-        
-        voxel_pos_old[i] = base_pos + camshift + double_buffer_offset_read;
-        
-        voxel_pos_new[i] = base_pos + double_buffer_offset_write;
-    }
-
     if (clamp(orig_voxel_pos, 0, VOXEL_AREA) == orig_voxel_pos)
     {
         vec4 voxel_data[LAYER_COUNT];
         vec4 color_effect[LAYER_COUNT];
         vec4 total_light[LAYER_COUNT];
-
-        for (int i = 0; i < LAYER_COUNT; i++) {
-    
-            int current_z_offset = i * Z_OFFSET_STEP;
-            ivec3 read_pos = ivec3(orig_voxel_pos.x, orig_voxel_pos.y, orig_voxel_pos.z + current_z_offset);
-
-            uint integerValue = imageLoad(cimage1, read_pos).r;
-
-            voxel_data[i] = unpackUnorm4x8(integerValue);
-
-            color_effect[i] = voxel_data[i];
-            
-            total_light[i] = vec4(0.0);
-        }
-
-        //light propagation
-
         ivec3 neighbors[6] = ivec3[6](
             ivec3(1,0,0),
             ivec3(-1,0,0),
@@ -81,15 +57,48 @@ void main()
 
         vec4 light;
 
-        for (int layer = 0; layer < LAYER_COUNT; layer++) 
-        {
+        for (int layer = 0; layer < LAYER_COUNT; layer++) {
 
-            // İç Döngü: O katmandaki vokselin 6 komşusu için
+            int current_z_offset = layer * Z_OFFSET_STEP;
+            ivec3 read_pos = ivec3(orig_voxel_pos.x, orig_voxel_pos.y, orig_voxel_pos.z + current_z_offset);
+
+            voxel_pos_old[layer] = read_pos + camshift + double_buffer_offset_read;
+            voxel_pos_new[layer] = read_pos + double_buffer_offset_write;
+
+            uint integerValue = imageLoad(cimage1, read_pos).r;
+            voxel_data[layer] = unpackUnorm4x8(integerValue);
+            
+            if(length(voxel_data[layer].rgb) > 0.0) {
+                voxel_data[layer].a = 1.0; 
+            }
+
+            color_effect[layer] = voxel_data[layer];
+            total_light[layer] = vec4(0.0);
+
+            float life_decay = 1.0 / float(layer + 1.0);
+
+            // 6 directions
             for(int i = 0; i < 6; i++) {
                 vec4 light = imageLoad(cimage1_colored_light, voxel_pos_old[layer] + neighbors[i]);
-                total_light[layer] = max(total_light[layer], light - 1.0/float(layer+4.0));
+
+                if (light.a > 0.001) {
+                    
+                    float old_life = light.a;
+                    float new_life = max(0.0, old_life - life_decay);
+
+                    if (old_life > 0.0) {
+                        float fade_ratio = new_life / old_life;
+                        light.rgb *= fade_ratio;
+                    }
+                    
+                    light.a = new_life; // Yeni ömrü kaydet
+                } else {
+                    light = vec4(0.0);
+                }
+
+                total_light[layer] = max(total_light[layer], light);
             }
-            total_light[layer] = max(total_light[layer], 0.0);
+
             color_effect[layer] = max(total_light[layer], color_effect[layer]);
 
             imageStore(cimage1_colored_light, voxel_pos_new[layer], color_effect[layer]);

@@ -7,6 +7,7 @@ vec4 voxel_data[15];
     mc_Entity.x == 5.0 ? soul_blue : //sculk_sensor calibrated_sculk_sensor 1
     mc_Entity.x == 6.0 ? amethyst_pink : //small_amethyst_bud 1
     mc_Entity.x == 7.0 ? redstone_red : //redstone_wire:power=1,2,3... 1
+    //mc_Entity.x == 10005.0 ? vec4(0,0,0,1) :
     vec4(0.0);
     voxel_data[1] =
     mc_Entity.x == 8.0 ? amethyst_pink : //medium_amethyst_bud 2

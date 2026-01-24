@@ -10,6 +10,8 @@
 #define gl_EXP2 2049
 #define gl_LINEAR 9729
 
+const int shadowMapResolution = 4096; // [512 1024 2048 4096 8192]
+
 // Voxel functions
 
 // Function to get voxel position
@@ -19,7 +21,7 @@
 float getSoftShadow(vec3 shadowScreenSpace) {
     const float shadowBias = 0.00005;
     const int shadowSamples = 9;
-    const float texelSize = 1.0 / 4096.0; // shadowMapResolution
+    const float texelSize = 1.0 / shadowMapResolution; // shadowMapResolution
     
     float shadowSum = 0.0;
     float currentDepth = shadowScreenSpace.z - shadowBias;
@@ -41,7 +43,7 @@ float getSoftShadow(vec3 shadowScreenSpace) {
 float getSoftColoredShadow(vec3 shadowScreenSpace) {
     const float shadowBias = 0.00005;
     const int shadowSamples = 9;
-    const float texelSize = 1.0 / 4096.0; // shadowMapResolution
+    const float texelSize = 1.0 / shadowMapResolution; // shadowMapResolution
     
     float shadowSum = 0.0;
     float currentDepth = shadowScreenSpace.z - shadowBias;
@@ -222,9 +224,17 @@ vec3 lightingCaclulations(vec3 albedo){
     //ambient
     vec3 ambientLightDirection = worldGeoNormal;
 #if LIGHT_STYLE == 0
-    vec3 ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
+    vec3 ambientLight;
+    if(clamp(voxel_pos, 0, VOXEL_AREA) == voxel_pos)
+        ambientLight = pow((pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
+    else
+        ambientLight = pow((torchLightColor + pow(0.2,1/2.2) * skyLightColor) + 0.1,vec3(2.2)) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);//my solution
 #else
-    vec3 ambientLight = (torchLightColor + 0.2 * skyLightColor) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
+    vec3 ambientLight;
+    if(clamp(voxel_pos, 0, VOXEL_AREA) == voxel_pos)
+        ambientLight = (0.2 * skyLightColor) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
+    else
+        ambientLight = (torchLightColor + 0.2 * skyLightColor) * clamp(dot(ambientLightDirection,normalWorldSpace), 0.0, 1.0);
 #endif
     //brdf
     vec3 outputColor = albedo * ambientLight + skyLightColor * shadowMultiplier * brdf(lightDirection, viewDirection, roughness, normalWorldSpace, albedo, metallic, reflectance);
