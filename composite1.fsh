@@ -65,28 +65,32 @@ vec3 screenToWorldSpace(vec2 screenCoord, float depth) {
     return worldSpace.xyz;
 }
 
+vec3 projectAndDivide(mat4 projectionMatrix, vec3 position){
+    vec4 homogeneousPos = projectionMatrix * vec4(position, 1.0);
+    return homogeneousPos.xyz/homogeneousPos.w;
+}
+
 // Sample shadow map for volumetric lighting - enhanced for underwater and colored glass
 vec4 sampleVolumetricShadowWithColor(vec3 worldPos, bool underwater) {
-    vec3 fragFeetPlayerSpace = worldPos - cameraPosition;
+    vec3 feetPlayerPos = worldPos - cameraPosition;
     // Reduced bias drift to maintain consistency
-    vec3 adjustedFragFeetPlayerSpace = fragFeetPlayerSpace + 0.005 * normalize(shadowLightPosition);
-    vec3 fragShadowViewSpace = (shadowModelView * vec4(adjustedFragFeetPlayerSpace, 1.0)).xyz;
-    vec4 fragHomogeneousSpace = shadowProjection * vec4(fragShadowViewSpace, 1.0);
-    vec3 fragShadowNdcSpace = fragHomogeneousSpace.xyz / fragHomogeneousSpace.w;
-    float distanceFromPlayerShadowNDC = length(fragShadowNdcSpace.xy);
-    vec3 distortedShadowNdcSpace = vec3(fragShadowNdcSpace.xy / (0.1 + distanceFromPlayerShadowNDC), fragShadowNdcSpace.z);
-    vec3 fragShadowScreenSpace = distortedShadowNdcSpace * 0.5 + 0.5;
+    vec3 adjustedFeetPlayerPos = feetPlayerPos + 0.005 * normalize(shadowLightPosition);
+    vec3 shadowViewPos = (shadowModelView * vec4(adjustedFeetPlayerPos, 1.0)).xyz;
+    vec3 shadowNdcPos = projectAndDivide(shadowProjection, shadowViewPos);
+    float distanceFromPlayerShadowNDC = length(shadowNdcPos.xy);
+    vec3 distortedShadowNdcPos = vec3(shadowNdcPos.xy / (0.1 + distanceFromPlayerShadowNDC), shadowNdcPos.z);
+    vec3 shadowScreenPos = distortedShadowNdcPos * 0.5 + 0.5;
 
-    if(fragShadowScreenSpace.x < 0.0 || fragShadowScreenSpace.x > 1.0 ||
-       fragShadowScreenSpace.y < 0.0 || fragShadowScreenSpace.y > 1.0) {
+    if(shadowScreenPos.x < 0.0 || shadowScreenPos.x > 1.0 ||
+       shadowScreenPos.y < 0.0 || shadowScreenPos.y > 1.0) {
         return vec4(1.0, 1.0, 1.0, underwater ? 0.7 : 1.0); // Underwater gets ambient light even outside shadow map
     }
 
     // Sample shadow maps and colored shadow
-    float coloredShadowDepth = texture(shadowtex1, fragShadowScreenSpace.xy).r;
-    float regularShadowDepth = texture(shadowtex0, fragShadowScreenSpace.xy).r;
-    vec3 shadowColor = texture(shadowcolor0, fragShadowScreenSpace.xy).rgb;
-    float currentDepth = fragShadowScreenSpace.z - 0.00005;
+    float coloredShadowDepth = texture(shadowtex1, shadowScreenPos.xy).r;
+    float regularShadowDepth = texture(shadowtex0, shadowScreenPos.xy).r;
+    vec3 shadowColor = texture(shadowcolor0, shadowScreenPos.xy).rgb;
+    float currentDepth = shadowScreenPos.z - 0.00005;
 
     if(underwater) {
         // If we're in colored shadow (water) but not in regular shadow, it's water filtering light

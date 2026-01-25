@@ -68,35 +68,16 @@ void main()
             uint integerValue = imageLoad(cimage1, read_pos).r;
             voxel_data[layer] = unpackUnorm4x8(integerValue);
             
-            if(length(voxel_data[layer].rgb) > 0.0) {
-                voxel_data[layer].a = 1.0; 
-            }
-
             color_effect[layer] = voxel_data[layer];
             total_light[layer] = vec4(0.0);
-
-            float life_decay = 1.0 / float(layer + 1.0);
-
+            float new_alpha;
+            vec4 light;
             // 6 directions
             for(int i = 0; i < 6; i++) {
-                vec4 light = imageLoad(cimage1_colored_light, voxel_pos_old[layer] + neighbors[i]);
-
-                if (light.a > 0.001) {
-                    
-                    float old_life = light.a;
-                    float new_life = max(0.0, old_life - life_decay);
-
-                    if (old_life > 0.0) {
-                        float fade_ratio = new_life / old_life;
-                        light.rgb *= fade_ratio;
-                    }
-                    
-                    light.a = new_life; // Yeni ömrü kaydet
-                } else {
-                    light = vec4(0.0);
-                }
-
-                total_light[layer] = max(total_light[layer], light);
+                light = imageLoad(cimage1_colored_light, voxel_pos_old[layer] + neighbors[i]);
+                new_alpha = light.a-1.0/(layer+1.0);
+                total_light[layer].a = max(total_light[layer].a, new_alpha);
+                total_light[layer].rgb = max(total_light[layer].rgb, light.rgb*(new_alpha/light.a));
             }
 
             color_effect[layer] = max(total_light[layer], color_effect[layer]);

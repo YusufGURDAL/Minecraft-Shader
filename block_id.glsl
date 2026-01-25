@@ -2,12 +2,12 @@ vec4 voxel_data[15];
    	voxel_data[0] = 
     mc_Entity.x == 1.0 ? tech_white : //brewing_stand 1
     mc_Entity.x == 2.0 ? organic_amber : //brown_mushroom 1
-    mc_Entity.x == 3.0 ? portal_purple : //dragon_egg 1
+    mc_Entity.x == 3.0 ? vec4(portal_purple.rgb, 15/15) : //dragon_egg 1
     mc_Entity.x == 4.0 ? end_portal_black : //end_portal_frame 1
     mc_Entity.x == 5.0 ? soul_blue : //sculk_sensor calibrated_sculk_sensor 1
     mc_Entity.x == 6.0 ? amethyst_pink : //small_amethyst_bud 1
     mc_Entity.x == 7.0 ? redstone_red : //redstone_wire:power=1,2,3... 1
-    //mc_Entity.x == 10005.0 ? vec4(0,0,0,1) :
+    mc_Entity.x == 10005.0 ? vec4(1) :
     vec4(0.0);
     voxel_data[1] =
     mc_Entity.x == 8.0 ? amethyst_pink : //medium_amethyst_bud 2
@@ -19,7 +19,7 @@ vec4 voxel_data[15];
     mc_Entity.x == 12.0 ? portal_purple ://respawn_anchor:charges=1 3
     vec4(0.0);
     voxel_data[3] =
-    mc_Entity.x == 13.0 ? amethyst_pink ://large_amethyst_bud 4
+    mc_Entity.x == 13.0 ? vec4(amethyst_pink.rgb,15/15) ://large_amethyst_bud 4
     mc_Entity.x == 14.0 ? torch_yellow ://minecraft:oxidized_copper_bulb:lit:true minecraft:trial_spawner:trial_spawner_state=waiting_for_players 4
     vec4(0.0);
     voxel_data[4] =
@@ -63,7 +63,7 @@ vec4 voxel_data[15];
     mc_Entity.x == 34.0 ? torch_yellow ://minecraft:torch minecraft:wall_torch 14
     mc_Entity.x == 35.0 ? organic_amber :// minecraft:cave_vines:berries=true minecraft:cave_vines_plant:berries=true 14
     mc_Entity.x == 36.0 ? tech_white ://minecraft:end_rod 14
-    mc_Entity.x == 37.0 ? copper_green ://minecraft:copper_torch minecraft:copper_wall_torch 14
+    mc_Entity.x == 37.0 ? vec4(copper_green.rgb,15.0/15.0) ://minecraft:copper_torch minecraft:copper_wall_torch 14
     vec4(0.0);
     voxel_data[14] = 
     mc_Entity.x == 38.0 ? torch_yellow ://minecraft:fire minecraft:jack_o_lantern minecraft:lantern minecraft:campfire:lit=true minecraft:campfire:signal_fire=true minecraft:copper_bulb:lit=true 15

@@ -238,11 +238,10 @@ void main(){
                 light = 1.0 - (1.0 - light) * (1.0 - currentLayerColor);
                 centerLight += centerLayerColor;
             }
-
+        
             vec3 diffRGB = lightOffset - light;
-            diffRGB = clamp(diffRGB, vec3(-0.2), vec3(0.2));
-            vec3 shadeFactor = vec3(1.0) + (diffRGB * 5.0);
-            light *= shadeFactor;
+            light = light + diffRGB;
+            light = clamp(light, vec3(0.0), vec3(1.0));
 
             defaultColor.rgb =  (centerLight.rgb+light)*pow(albedo,vec3(1/2.2)) + defaultColor.rgb;
         #endif
