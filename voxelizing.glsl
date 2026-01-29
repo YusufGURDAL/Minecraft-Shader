@@ -39,13 +39,39 @@ if(mod(gl_VertexID,4)==0 && clamp(voxel_pos,0,VOXEL_AREA)==voxel_pos){
 #endif
 #if VISUALIZED_DATA == 5
     #include "block_id.glsl"
+    vec4 block =
+    mc_Entity.x == 10000.0 ? vec4(1) :
+    mc_Entity.x == 10005.0 ? vec4(1,1,1,0.8) :
+    mc_Entity.x == 10006.0 ? vec4(0.976, 1.0, 0.996,0.8) :
+    mc_Entity.x == 10007.0 ? vec4(0.616, 0.616, 0.592,0.8) :
+    mc_Entity.x == 10008.0 ? vec4(0.278, 0.31, 0.322,0.8) :
+    mc_Entity.x == 10009.0 ? vec4(0.114, 0.114, 0.129,0.8) :
+    mc_Entity.x == 10010.0 ? vec4(0.514, 0.329, 0.196,0.8) :
+    mc_Entity.x == 10011.0 ? vec4(0.69, 0.18, 0.149,0.8) :
+    mc_Entity.x == 10012.0 ? vec4(0.976, 0.502, 0.114,0.8) :
+    mc_Entity.x == 10013.0 ? vec4(0.996, 0.847, 0.239,0.8) :
+    mc_Entity.x == 10014.0 ? vec4(0.502, 0.78, 0.122,0.8) :
+    mc_Entity.x == 10015.0 ? vec4(0.369, 0.486, 0.086,0.8) :
+    mc_Entity.x == 10016.0 ? vec4(0.086, 0.612, 0.612,0.8) :
+    mc_Entity.x == 10017.0 ? vec4(0.227, 0.702, 0.855,0.8) :
+    mc_Entity.x == 10018.0 ? vec4(0.235, 0.267, 0.667,0.8) :
+    mc_Entity.x == 10019.0 ? vec4(0.537, 0.196, 0.722,0.8) :
+    mc_Entity.x == 10020.0 ? vec4(0.78, 0.306, 0.741,0.8) :
+    mc_Entity.x == 10021.0 ? vec4(0.953, 0.545, 0.667,0.8) :
+    mc_Entity.x == 7.0 ? vec4(1): 
+    vec4(0);
+    block=1.0-block;
 #endif
     if(frameTimeCounter < 1 && distance(vec3(voxel_pos), vec3(VOXEL_RADIUS)) < 3.0){
         voxel_data[0] = vec4(0.0, 0.0, 1.0, 1.0);
     }
     uint integerValue[LAYER_COUNT];
+    uint iv[LAYER_COUNT]; 
     for (int i=0; i<LAYER_COUNT; i++){
         integerValue[i] = packUnorm4x8(voxel_data[i]);
         imageAtomicMax( cimage1, ivec3(voxel_pos.x,voxel_pos.y,voxel_pos.z+(VOXEL_AREA*i)), integerValue[i] );
+        iv[i] = packUnorm4x8(block);
+        imageAtomicMax( cimage2, ivec3(voxel_pos.x,voxel_pos.y,voxel_pos.z+(VOXEL_AREA*i)), iv[i]);
     }
+    
 }

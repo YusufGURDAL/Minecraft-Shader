@@ -16,6 +16,7 @@
 layout (local_size_x = 8, local_size_y = 16, local_size_z = 1) in;
 
 layout (r32ui) uniform uimage3D cimage1;
+layout (r32ui) uniform uimage3D cimage2;
 layout (rgba8) uniform image3D cimage1_colored_light;
 
 uniform int frameCounter;
@@ -46,6 +47,7 @@ void main()
         vec4 voxel_data[LAYER_COUNT];
         vec4 color_effect[LAYER_COUNT];
         vec4 total_light[LAYER_COUNT];
+        vec4 voxel_block[LAYER_COUNT];
         ivec3 neighbors[6] = ivec3[6](
             ivec3(1,0,0),
             ivec3(-1,0,0),
@@ -67,6 +69,8 @@ void main()
 
             uint integerValue = imageLoad(cimage1, read_pos).r;
             voxel_data[layer] = unpackUnorm4x8(integerValue);
+            uint blockiv = imageLoad(cimage2,read_pos).r;
+            vec4 block = unpackUnorm4x8(blockiv);
             
             color_effect[layer] = voxel_data[layer];
             total_light[layer] = vec4(0.0);
@@ -76,8 +80,9 @@ void main()
             for(int i = 0; i < 6; i++) {
                 light = imageLoad(cimage1_colored_light, voxel_pos_old[layer] + neighbors[i]);
                 new_alpha = light.a-1.0/(layer+1.0);
+                new_alpha *= 1.0-block.a;
                 total_light[layer].a = max(total_light[layer].a, new_alpha);
-                total_light[layer].rgb = max(total_light[layer].rgb, light.rgb*(new_alpha/light.a));
+                total_light[layer].rgb = max(total_light[layer].rgb, light.rgb*(new_alpha/light.a))*(1.0-block.rgb);
             }
 
             color_effect[layer] = max(total_light[layer], color_effect[layer]);
